@@ -23,6 +23,7 @@
         "@typescript-eslint/explicit-module-boundary-types": "off", // Same explanation as above
         "@typescript-eslint/no-use-before-define": ["error", { "functions": false, "classes": false, "variables": false, "typedefs": false }], // Sometimes it makes sense to use a class/function/type above its definition for organizational reasons
         "@typescript-eslint/no-var-requires": "off", // Require shouldn't be used most of the time, but it is needed to import packages that don't support TypeScript
+        "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }], // Variables that begin with an underscore won't trigger the no-unused-vars warning
         "prefer-const": "off",
         "no-autofix/prefer-const": "error",
         "react-hooks/rules-of-hooks": "error",

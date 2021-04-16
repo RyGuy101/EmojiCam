@@ -1,11 +1,9 @@
 // This file is used purely to define a type definition encompassing all possible actions
 
-import * as exampleActions from "./exampleActions";
-import * as externalActions from "./externalActions";
+import * as actions from "./actions";
 
 const allActions = {
-  ...exampleActions,
-  ...externalActions,
+  ...actions,
 };
 
 const allActionsArray = Object.values(allActions);

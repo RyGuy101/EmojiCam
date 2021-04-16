@@ -1,13 +1,12 @@
 import React from "react";
 
 import "./App.css";
-import ExampleComponent from "./ExampleComponent";
+import TypingInterface from "./TypingInterface";
 
 const App = () => {
   return (
     <div>
-      <h1>Welcome!</h1>
-      <ExampleComponent exampleProp="This string was passed from the parent component"></ExampleComponent>
+      <TypingInterface />
     </div>
   );
 };
