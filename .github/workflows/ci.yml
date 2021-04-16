@@ -17,11 +17,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build
-      run: cd app && npm install && CI=false npm run react-build && zip -r TinyType.zip app/build
+      run: cd app && npm install && CI=false npm run react-build && zip -r TinyType.zip build
     - name: Upload built web app to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: TinyType.zip
+        file: app/TinyType.zip
         tag: ${{ github.ref }}
         overwrite: true
