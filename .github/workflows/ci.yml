@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build
-      run: cd app && npm install && CI=false npm run react-build && zip -r TinyType.zip build
+      run: cd app && npm install && CI=false npm run react-build && mv build TinyType && zip -r TinyType.zip TinyType
     - name: Upload built web app to release
       uses: svenstaro/upload-release-action@v2
       with:
