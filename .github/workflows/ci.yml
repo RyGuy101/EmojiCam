@@ -9,17 +9,17 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout 🛎️
-        uses: actions/checkout@v2.3.1
+      - name: Checkout
+        uses: actions/checkout@v2
 
-      - name: Install and Build 🔧
+      - name: Install and Build
         run: |
           cd app
           npm install
           CI=false npm run react-build
 
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@4.1.1
-        with:
-          branch: gh-pages # The branch the action should deploy to.
-          folder: app/build # The folder the action should deploy.
+      # - name: Deploy
+      #   uses: JamesIves/github-pages-deploy-action@4.1.1
+      #   with:
+      #     branch: gh-pages # The branch the action should deploy to.
+      #     folder: app/build # The folder the action should deploy.
