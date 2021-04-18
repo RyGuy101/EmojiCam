@@ -5,21 +5,23 @@ on:
     branches:
       - master
 
+  pull_request:
+    branches:
+      - master
+
 jobs:
-  build-and-deploy:
+  release:
+    name: Release
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Install and Build
-        run: |
-          cd app
-          npm install
-          CI=false npm run react-build
-
-      # - name: Deploy
-      #   uses: JamesIves/github-pages-deploy-action@4.1.1
-      #   with:
-      #     branch: gh-pages # The branch the action should deploy to.
-      #     folder: app/build # The folder the action should deploy.
+    - uses: actions/checkout@v2
+    - name: Build
+      run: cd app && npm install && CI=false npm run react-build && mv build TinyType && zip -r TinyType.zip TinyType
+    - name: Upload built web app to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: app/TinyType.zip
+        tag: ${{ github.ref }}
+        overwrite: true
