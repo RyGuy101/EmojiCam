@@ -12,7 +12,7 @@
     "start-web": "cross-env PORT=3001 react-scripts start",
     "start-prod": "cross-env ELECTRON_IS_DEV=0 electron .",
     "react-build": "react-scripts build",
-    "electron-build": "tsc electron/electron.ts",
+    "electron-build": "tsc --project tsconfig.electron.json",
     "build": "npm run electron-build && npm run react-build",
     "test": "react-scripts test --env=jsdom",
     "lint": "eslint ./src ./electron --ext .ts,.tsx",
@@ -38,9 +38,11 @@
     "package-<platform>": "Create standalone executable for a specific platform. Platform-specific command line options for electron-packager can be set."
   },
   "dependencies": {
+    "electron-context-menu": "^2.5.1",
     "electron-is-dev": "^2.0.0"
   },
   "dependenciesComments": {
+    "electron-context-menu": "Add a right-click menu to Electron, including Inspect Element in development mode",
     "electron-is-dev": "Detect if electron is running in development mode"
   },
   "devDependencies": {

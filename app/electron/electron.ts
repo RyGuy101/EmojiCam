@@ -1,7 +1,8 @@
 import { app, BrowserWindow, Menu, MenuItem, protocol } from "electron";
-import * as path from "path";
-import * as isDev from "electron-is-dev";
+import path from "path";
+import isDev from "electron-is-dev";
 import type * as electronDevtoolsInstaller from "electron-devtools-installer";
+import contextMenu from "electron-context-menu";
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -39,6 +40,8 @@ function createWindow() {
     });
   }
 
+  contextMenu(); // Create right-click menu, including Inspect Element in development mode
+
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 800,
@@ -69,7 +72,7 @@ function createWindow() {
     mainWindow = null;
   });
 
-  // Allow viewing devtools, copying, pasting, etc. in packaged app:
+  // Allow viewing devtools, copying, pasting, etc. in packaged app. This can be customized later.
   if (!isDev) {
     const template = [
       new MenuItem({
