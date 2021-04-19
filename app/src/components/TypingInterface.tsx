@@ -11,7 +11,7 @@ import { useConstRefFunc, useTimeout, useInterval } from "utils/customHooks";
 const Typo = require("typo-js");
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
 const dictionary = new Typo("en_US", false, false, {
-  dictionaryPath: "/dictionaries",
+  dictionaryPath: "dictionaries",
 });
 
 const mapStateToProps = (state: AppState) => {
