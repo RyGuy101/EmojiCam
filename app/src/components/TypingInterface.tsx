@@ -5,6 +5,7 @@ import { Button } from "reactstrap";
 import { AppState } from "redux/store";
 import * as actions from "redux/actions/actions";
 import { ExtractPropsType } from "utils/reduxUtils";
+import { useConstRefFunc, useTimeout, useInterval } from "utils/customHooks";
 
 const mapStateToProps = (state: AppState) => {
   return {
@@ -17,95 +18,81 @@ const mapDispatchToProps = actions;
 const connectComponent = connect(mapStateToProps, mapDispatchToProps);
 type Props = ExtractPropsType<typeof connectComponent>;
 
-const Key = ({
-  char,
-  display,
-  parentProps,
-  setShift,
-  setShowPunctuation,
-  tappedCharacter,
-  ...rest
-}: {
-  char: string;
-  display?: string;
-  parentProps: Props;
-  setShift: (val: boolean) => void;
-  setShowPunctuation: (val: boolean) => void;
-  tappedCharacter: React.MutableRefObject<string | null>;
-} & ComponentProps<typeof Button>) => (
-  <Button
-    {...rest}
-    outline
-    onTouchStart={(e) => {
-      tappedCharacter.current = char;
-
-      if (rest.onTouchStart) {
-        rest.onTouchStart(e);
-      }
-    }}
-    onClick={(e) => {
-      char = tappedCharacter.current ? tappedCharacter.current : char; // Fix weird bug on mobile where the wrong button gets clicked
-      tappedCharacter.current = null;
-      if (/\s/.test(parentProps.currentWord.slice(-1)) && !/\s/.test(char)) {
-        parentProps.pushCurrentWord();
-        parentProps.setCurrentWord(char);
-      } else {
-        parentProps.setCurrentWord(parentProps.currentWord + char);
-      }
-      setShift(false);
-      setShowPunctuation(char === " ");
-
-      if (rest.onClick) {
-        rest.onClick(e);
-      }
-    }}
-  >
-    {display ? display : char}
-  </Button>
-);
-
-const LetterKey = ({
-  upperChar,
-  shift,
-  caps,
-  ...keyProps
-}: {
-  upperChar: string;
-  shift: boolean;
-  caps: boolean;
-} & ComponentProps<typeof Key>) =>
-  shift || caps ? (
-    <Key {...keyProps} char={upperChar} />
-  ) : (
-    <Key {...keyProps} />
-  );
-
 const TypingInterface = (props: Props) => {
-  const propsRef = useRef(props);
-  propsRef.current = props;
-
   const [shift, setShift] = useState(true);
   const [caps, setCaps] = useState(false);
   const [showPunctuation, setShowPunctuation] = useState(false);
   const [numberKeyboard, setNumberKeyboard] = useState(false);
-  const repeatSpaceHandle = useRef<number | undefined>(undefined);
-  const repeatBackspaceHandle = useRef<number | undefined>(undefined);
   const tappedCharacter = useRef<string | null>(null);
+  const [repeatedBackspace, setRepeatedBackspace] = useState(false);
+  const [repeatedSpace, setRepeatedSpace] = useState(false);
 
-  const keyProps = {
-    parentProps: props,
-    setShift,
-    setShowPunctuation,
-    tappedCharacter,
-  };
+  const Key = useConstRefFunc(
+    ({
+      char,
+      display,
+      ...buttonProps
+    }: {
+      char: string;
+      display?: string;
+    } & ComponentProps<typeof Button>) => (
+      <Button
+        {...buttonProps}
+        outline
+        onTouchStart={(e) => {
+          if (buttonProps.onTouchStart) {
+            buttonProps.onTouchStart(e);
+            if (e.defaultPrevented) {
+              return;
+            }
+          }
 
-  const letterKeyProps = {
-    shift,
-    caps,
-    ...keyProps,
-  };
+          tappedCharacter.current = char;
+        }}
+        onClick={(e) => {
+          if (buttonProps.onClick) {
+            buttonProps.onClick(e);
+            if (e.defaultPrevented) {
+              return;
+            }
+          }
 
-  const PunctuationKey = ({ char }: { char: string }) => (
+          const clickedChar = tappedCharacter.current
+            ? tappedCharacter.current
+            : char; // Fix weird bug on mobile where the wrong button gets clicked
+          tappedCharacter.current = null;
+          if (
+            /\s/.test(props.currentWord.slice(-1)) &&
+            !/\s/.test(clickedChar)
+          ) {
+            props.pushCurrentWord();
+            props.setCurrentWord(clickedChar);
+          } else {
+            props.setCurrentWord(props.currentWord + clickedChar);
+          }
+          setShift(false);
+          setShowPunctuation(clickedChar === " ");
+        }}
+      >
+        {display ? display : char}
+      </Button>
+    )
+  );
+
+  const LetterKey = useConstRefFunc(
+    ({
+      upperChar,
+      lowerChar,
+      ...buttonProps
+    }: {
+      upperChar: string;
+      lowerChar: string;
+    } & ComponentProps<typeof Button>) => (
+      <Key char={shift || caps ? upperChar : lowerChar} {...buttonProps} />
+    )
+  );
+
+  const PunctuationKey = useConstRefFunc(({ char }: { char: string }) => (
     <Button
       outline
       onClick={() => {
@@ -120,52 +107,38 @@ const TypingInterface = (props: Props) => {
     >
       {char}
     </Button>
-  );
+  ));
 
-  const backspace = (currentWord: string) => {
-    if (currentWord.length) {
-      props.setCurrentWord(currentWord.slice(0, -1));
+  const backspace = () => {
+    if (props.currentWord.length) {
+      props.setCurrentWord(props.currentWord.slice(0, -1));
     } else {
       props.popLastWord();
     }
     setShift(false);
   };
 
-  const repeatBackspace = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    if (repeatBackspaceHandle.current === undefined) {
-      repeatBackspaceHandle.current = window.setTimeout(() => {
-        backspace(propsRef.current.currentWord);
-        repeatBackspaceHandle.current = window.setInterval(() => {
-          backspace(propsRef.current.currentWord);
-        }, 50);
-      }, 500);
-    }
-  };
+  const [startBackspaceInterval, clearBackspaceInterval] = useInterval(() => {
+    backspace();
+  }, 50);
 
-  const repeatSpace = (e: React.MouseEvent | React.TouchEvent) => {
-    // console.log("repeat"); // TODO debug
-    e.preventDefault();
-    if (repeatSpaceHandle.current === undefined) {
-      repeatSpaceHandle.current = window.setTimeout(() => {
-        props.setCurrentWord(propsRef.current.currentWord + " ");
-        setShift(false);
-        repeatSpaceHandle.current = window.setInterval(() => {
-          props.setCurrentWord(propsRef.current.currentWord + " ");
-          setShift(false);
-        }, 50);
-      }, 500);
-    }
-  };
+  const [startBackspaceTimeout, clearBackspaceTimeout] = useTimeout(() => {
+    backspace();
+    setRepeatedBackspace(true);
+    startBackspaceInterval();
+  }, 500);
 
-  const clearTimeoutOrInterval = (
-    handleRef: React.MutableRefObject<number | undefined>
-  ) => {
-    console.log("touch end!");
-    clearTimeout(handleRef.current);
-    clearInterval(handleRef.current);
-    handleRef.current = undefined;
-  };
+  const [startSpaceInterval, clearSpaceInterval] = useInterval(() => {
+    props.setCurrentWord(props.currentWord + " ");
+    setShift(false);
+  }, 50);
+
+  const [startSpaceTimeout, clearSpaceTimeout] = useTimeout(() => {
+    props.setCurrentWord(props.currentWord + " ");
+    setShift(false);
+    setRepeatedSpace(true);
+    startSpaceInterval();
+  }, 500);
 
   return (
     <div className="TypingInterface">
@@ -182,73 +155,73 @@ const TypingInterface = (props: Props) => {
             {props.currentWord.replaceAll("\n", " ") + "▋"}
           </span>
         </div>
-        <Key char={"\n"} display="⏎" {...keyProps} id="enter" />
+        <Key char={"\n"} display="⏎" id="enter" />
       </div>
 
       {numberKeyboard ? (
         <div>
           <div>
-            <Key char="7" {...keyProps} />
-            <Key char="8" {...keyProps} />
-            <Key char="9" {...keyProps} />
-            <Key char="@" {...keyProps} />
-            <Key char="-" {...keyProps} />
+            <Key char="7" />
+            <Key char="8" />
+            <Key char="9" />
+            <Key char="@" />
+            <Key char="-" />
           </div>
           <div>
-            <Key char="4" {...keyProps} />
-            <Key char="5" {...keyProps} />
-            <Key char="6" {...keyProps} />
-            <Key char="$" {...keyProps} />
-            <Key char="%" {...keyProps} />
+            <Key char="4" />
+            <Key char="5" />
+            <Key char="6" />
+            <Key char="$" />
+            <Key char="%" />
           </div>
           <div>
-            <Key char="1" {...keyProps} />
-            <Key char="2" {...keyProps} />
-            <Key char="3" {...keyProps} />
-            <Key char="'" {...keyProps} />
-            <Key char="/" {...keyProps} />
+            <Key char="1" />
+            <Key char="2" />
+            <Key char="3" />
+            <Key char="'" />
+            <Key char="/" />
           </div>
         </div>
       ) : (
         <div id="qwerty">
           <div>
-            <LetterKey upperChar="Q" char="q" {...letterKeyProps} />
-            <LetterKey upperChar="W" char="w" {...letterKeyProps} />
-            <LetterKey upperChar="E" char="e" {...letterKeyProps} />
-            <LetterKey upperChar="R" char="r" {...letterKeyProps} />
-            <LetterKey upperChar="T" char="t" {...letterKeyProps} />
-            <LetterKey upperChar="Y" char="y" {...letterKeyProps} />
-            <LetterKey upperChar="U" char="u" {...letterKeyProps} />
-            <LetterKey upperChar="I" char="i" {...letterKeyProps} />
-            <LetterKey upperChar="O" char="o" {...letterKeyProps} />
-            <LetterKey upperChar="P" char="p" {...letterKeyProps} />
+            <LetterKey upperChar="Q" lowerChar="q" />
+            <LetterKey upperChar="W" lowerChar="w" />
+            <LetterKey upperChar="E" lowerChar="e" />
+            <LetterKey upperChar="R" lowerChar="r" />
+            <LetterKey upperChar="T" lowerChar="t" />
+            <LetterKey upperChar="Y" lowerChar="y" />
+            <LetterKey upperChar="U" lowerChar="u" />
+            <LetterKey upperChar="I" lowerChar="i" />
+            <LetterKey upperChar="O" lowerChar="o" />
+            <LetterKey upperChar="P" lowerChar="p" />
           </div>
           <div>
-            <LetterKey upperChar="A" char="a" {...letterKeyProps} />
-            <LetterKey upperChar="S" char="s" {...letterKeyProps} />
-            <LetterKey upperChar="D" char="d" {...letterKeyProps} />
-            <LetterKey upperChar="F" char="f" {...letterKeyProps} />
-            <LetterKey upperChar="G" char="g" {...letterKeyProps} />
-            <LetterKey upperChar="H" char="h" {...letterKeyProps} />
-            <LetterKey upperChar="J" char="j" {...letterKeyProps} />
-            <LetterKey upperChar="K" char="k" {...letterKeyProps} />
-            <LetterKey upperChar="L" char="l" {...letterKeyProps} />
+            <LetterKey upperChar="A" lowerChar="a" />
+            <LetterKey upperChar="S" lowerChar="s" />
+            <LetterKey upperChar="D" lowerChar="d" />
+            <LetterKey upperChar="F" lowerChar="f" />
+            <LetterKey upperChar="G" lowerChar="g" />
+            <LetterKey upperChar="H" lowerChar="h" />
+            <LetterKey upperChar="J" lowerChar="j" />
+            <LetterKey upperChar="K" lowerChar="k" />
+            <LetterKey upperChar="L" lowerChar="l" />
           </div>
           <div>
-            <LetterKey upperChar="Z" char="z" {...letterKeyProps} />
-            <LetterKey upperChar="X" char="x" {...letterKeyProps} />
-            <LetterKey upperChar="C" char="c" {...letterKeyProps} />
-            <LetterKey upperChar="V" char="v" {...letterKeyProps} />
-            <LetterKey upperChar="B" char="b" {...letterKeyProps} />
-            <LetterKey upperChar="N" char="n" {...letterKeyProps} />
-            <LetterKey upperChar="M" char="m" {...letterKeyProps} />
+            <LetterKey upperChar="Z" lowerChar="z" />
+            <LetterKey upperChar="X" lowerChar="x" />
+            <LetterKey upperChar="C" lowerChar="c" />
+            <LetterKey upperChar="V" lowerChar="v" />
+            <LetterKey upperChar="B" lowerChar="b" />
+            <LetterKey upperChar="N" lowerChar="n" />
+            <LetterKey upperChar="M" lowerChar="m" />
           </div>
         </div>
       )}
 
       <div>
         {numberKeyboard ? (
-          <Key char="0" {...keyProps} />
+          <Key char="0" />
         ) : (
           <Button
             outline={!shift && !caps}
@@ -274,21 +247,72 @@ const TypingInterface = (props: Props) => {
             <Key
               char=" "
               display="⎵"
-              {...keyProps}
               id="space"
-              onMouseDown={repeatSpace}
-              onTouchStart={repeatSpace}
-              onMouseUp={() => clearTimeoutOrInterval(repeatSpaceHandle)}
-              onTouchEnd={() => clearTimeoutOrInterval(repeatSpaceHandle)}
+              onClick={(e) => {
+                if (repeatedSpace) {
+                  e.preventDefault();
+                }
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                setRepeatedSpace(false);
+                startSpaceTimeout();
+                document.addEventListener(
+                  "touchend",
+                  () => {
+                    clearSpaceTimeout();
+                    clearSpaceInterval();
+                  },
+                  { once: true }
+                );
+              }}
+              onMouseDown={() => {
+                setRepeatedSpace(false);
+                startSpaceTimeout();
+                document.addEventListener(
+                  "mouseup",
+                  () => {
+                    clearSpaceTimeout();
+                    clearSpaceInterval();
+                  },
+                  { once: true }
+                );
+              }}
             />
             <Button
               outline
               id="backspace"
-              onClick={() => backspace(props.currentWord)}
-              onMouseDown={repeatBackspace}
-              onTouchStart={repeatBackspace}
-              onMouseUp={() => clearTimeoutOrInterval(repeatBackspaceHandle)}
-              onTouchEnd={() => clearTimeoutOrInterval(repeatBackspaceHandle)}
+              onClick={() => {
+                if (repeatedBackspace) {
+                  return;
+                }
+                backspace();
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                setRepeatedBackspace(false);
+                startBackspaceTimeout();
+                document.addEventListener(
+                  "touchend",
+                  () => {
+                    clearBackspaceTimeout();
+                    clearBackspaceInterval();
+                  },
+                  { once: true }
+                );
+              }}
+              onMouseDown={() => {
+                setRepeatedBackspace(false);
+                startBackspaceTimeout();
+                document.addEventListener(
+                  "mouseup",
+                  () => {
+                    clearBackspaceTimeout();
+                    clearBackspaceInterval();
+                  },
+                  { once: true }
+                );
+              }}
             >
               ⌫
             </Button>
