@@ -7,6 +7,13 @@ import * as actions from "redux/actions/actions";
 import { ExtractPropsType } from "utils/reduxUtils";
 import { useConstRefFunc, useTimeout, useInterval } from "utils/customHooks";
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+const Typo = require("typo-js");
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+const dictionary = new Typo("en_US", false, false, {
+  dictionaryPath: "/dictionaries",
+});
+
 const mapStateToProps = (state: AppState) => {
   return {
     currentWord: state.main.currentWord,
@@ -23,9 +30,11 @@ const TypingInterface = (props: Props) => {
   const [caps, setCaps] = useState(false);
   const [showPunctuation, setShowPunctuation] = useState(false);
   const [numberKeyboard, setNumberKeyboard] = useState(false);
+  const [autoCorrected, setAutoCorrected] = useState("");
+  const [dontAutoCorrect, setDontAutoCorrect] = useState(false);
   const tappedCharacter = useRef<string | null>(null);
-  const [repeatedBackspace, setRepeatedBackspace] = useState(false);
-  const [repeatedSpace, setRepeatedSpace] = useState(false);
+  const repeatedBackspace = useRef(false);
+  const repeatedSpace = useRef(false);
 
   const Key = useConstRefFunc(
     ({
@@ -61,17 +70,38 @@ const TypingInterface = (props: Props) => {
             ? tappedCharacter.current
             : char; // Fix weird bug on mobile where the wrong button gets clicked
           tappedCharacter.current = null;
+          let autoCorrectedWord = "";
           if (
             /\s/.test(props.currentWord.slice(-1)) &&
             !/\s/.test(clickedChar)
           ) {
             props.pushCurrentWord();
             props.setCurrentWord(clickedChar);
+            setDontAutoCorrect(false);
           } else {
-            props.setCurrentWord(props.currentWord + clickedChar);
+            let word = props.currentWord;
+            if (clickedChar === " ") {
+              if (
+                !dontAutoCorrect &&
+                word.trim() === word &&
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                !dictionary.check(word)
+              ) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+                const suggestions = dictionary.suggest(word, 1);
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                if (suggestions.length > 0) {
+                  autoCorrectedWord = word + clickedChar;
+                  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+                  word = suggestions[0];
+                }
+              }
+            }
+            props.setCurrentWord(word + clickedChar);
           }
           setShift(false);
           setShowPunctuation(clickedChar === " ");
+          setAutoCorrected(autoCorrectedWord);
         }}
       >
         {display ? display : char}
@@ -102,6 +132,11 @@ const TypingInterface = (props: Props) => {
         setShift(
           numberKeyboard ? false : char === "." || char === "?" || char === "!"
         );
+        if (autoCorrected !== "") {
+          setAutoCorrected(
+            autoCorrected.slice(0, -1) + char + (numberKeyboard ? "" : " ")
+          );
+        }
         setShowPunctuation(false);
       }}
     >
@@ -111,9 +146,18 @@ const TypingInterface = (props: Props) => {
 
   const backspace = () => {
     if (props.currentWord.length) {
+      if (autoCorrected !== "") {
+        if (props.currentWord.slice(-1) === " ") {
+          setAutoCorrected(autoCorrected.slice(0, -1));
+        } else {
+          setAutoCorrected("");
+          setDontAutoCorrect(true);
+        }
+      }
       props.setCurrentWord(props.currentWord.slice(0, -1));
     } else {
       props.popLastWord();
+      setDontAutoCorrect(false);
     }
     setShift(false);
   };
@@ -124,7 +168,7 @@ const TypingInterface = (props: Props) => {
 
   const [startBackspaceTimeout, clearBackspaceTimeout] = useTimeout(() => {
     backspace();
-    setRepeatedBackspace(true);
+    repeatedBackspace.current = true;
     startBackspaceInterval();
   }, 500);
 
@@ -136,7 +180,7 @@ const TypingInterface = (props: Props) => {
   const [startSpaceTimeout, clearSpaceTimeout] = useTimeout(() => {
     props.setCurrentWord(props.currentWord + " ");
     setShift(false);
-    setRepeatedSpace(true);
+    repeatedSpace.current = true;
     startSpaceInterval();
   }, 500);
 
@@ -150,8 +194,21 @@ const TypingInterface = (props: Props) => {
         >
           {numberKeyboard ? "ABC" : "123"}
         </Button>
-        <div id="word_container">
-          <span id="word" dir="ltr">
+        <div
+          id="word_container"
+          onClick={() => {
+            if (autoCorrected !== "") {
+              props.setCurrentWord(autoCorrected);
+              setAutoCorrected("");
+              setDontAutoCorrect(true);
+            }
+          }}
+        >
+          <span
+            id="word"
+            dir="ltr"
+            className={autoCorrected !== "" ? "auto-corrected" : ""}
+          >
             {props.currentWord.replaceAll("\n", " ") + "▋"}
           </span>
         </div>
@@ -178,7 +235,7 @@ const TypingInterface = (props: Props) => {
             <Key char="1" />
             <Key char="2" />
             <Key char="3" />
-            <Key char="'" />
+            <Key char="'" onClick={() => setNumberKeyboard(false)} />
             <Key char="/" />
           </div>
         </div>
@@ -249,13 +306,13 @@ const TypingInterface = (props: Props) => {
               display="⎵"
               id="space"
               onClick={(e) => {
-                if (repeatedSpace) {
+                if (repeatedSpace.current) {
                   e.preventDefault();
                 }
               }}
               onTouchStart={(e) => {
                 e.preventDefault();
-                setRepeatedSpace(false);
+                repeatedSpace.current = false;
                 startSpaceTimeout();
                 document.addEventListener(
                   "touchend",
@@ -267,7 +324,7 @@ const TypingInterface = (props: Props) => {
                 );
               }}
               onMouseDown={() => {
-                setRepeatedSpace(false);
+                repeatedSpace.current = false;
                 startSpaceTimeout();
                 document.addEventListener(
                   "mouseup",
@@ -283,14 +340,14 @@ const TypingInterface = (props: Props) => {
               outline
               id="backspace"
               onClick={() => {
-                if (repeatedBackspace) {
+                if (repeatedBackspace.current) {
                   return;
                 }
                 backspace();
               }}
               onTouchStart={(e) => {
                 e.preventDefault();
-                setRepeatedBackspace(false);
+                repeatedBackspace.current = false;
                 startBackspaceTimeout();
                 document.addEventListener(
                   "touchend",
@@ -302,7 +359,7 @@ const TypingInterface = (props: Props) => {
                 );
               }}
               onMouseDown={() => {
-                setRepeatedBackspace(false);
+                repeatedBackspace.current = false;
                 startBackspaceTimeout();
                 document.addEventListener(
                   "mouseup",

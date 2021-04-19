@@ -70,6 +70,10 @@ html, body, #root, .App {
     align-self: center;
 }
 
+.TypingInterface #word.auto-corrected {
+    color: blue;
+}
+
 .TypingInterface #qwerty .btn {
     width: 25.6px;
 }
