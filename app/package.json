@@ -20,7 +20,8 @@
     "package": "npm run build && electron-packager . --overwrite --asar.unpackDir=\"electron/files\" --out=release-builds --ignore=\"^/([^benp]|public|package-lock.json)\" --arch=x64",
     "package-mac": "npm run package -- --platform=darwin",
     "package-win": "npm run package -- --platform=win32",
-    "package-linux": "npm run package -- --platform=linux"
+    "package-linux": "npm run package -- --platform=linux",
+    "postinstall": "patch-package"
   },
   "//scriptsComments": {
     "react-start": "Start the React app in development mode, which will auto-reload the app when files are changed.",
@@ -69,7 +70,12 @@
     "eslint-plugin-prettier": "^3.3.1",
     "eslint-plugin-react": "^7.23.1",
     "eslint-plugin-react-hooks": "^4.2.0",
+    "grapheme-splitter": "^1.0.4",
     "immer": "^9.0.1",
+    "install": "^0.13.0",
+    "npm": "^7.11.2",
+    "one-dollar": "^2.1.0",
+    "patch-package": "^6.4.7",
     "prettier": "^2.2.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
