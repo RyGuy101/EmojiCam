@@ -1,5 +1,5 @@
 {
-  "name": "EmojiType",
+  "name": "EmojiCam",
   "version": "0.1.0",
   "private": true,
   "main": "electron/electron.js",

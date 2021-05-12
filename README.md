@@ -1,5 +1,5 @@
 Project for ECE 188: Applied & Interactive Machine Learning (UCLA Spring 2021)
 
-Try it out here: https://ryguy101.github.io/EmojiType
+Try it out here: https://ryguy101.github.io/EmojiCam
 
-This builds off of https://ryguy101.github.io/TinyType.
+This builds off of https://ryguy101.github.io/EmojiType.
