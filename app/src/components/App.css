@@ -20,13 +20,29 @@ html, body, #root, .App {
     white-space: pre-wrap;
 }
 
+.App .interfaceContainer {
+    display: flex;
+    flex-direction: row;
+    align-self: center;
+}
+
+.CameraInterface .canvasbox {
+    margin-left: 20px;
+    margin-right: 20px;
+    width: 450px;
+    height: 338px;
+}
+
+.CameraInterface .videobox {
+    display: none;
+}
+
 .TypingInterface {
     width: 256px;
     height: 256px;
     outline-style: solid;
     outline-width: 2px;
     outline-color: #6c757d;
-    align-self: center;
 }
 
 .TypingInterface .btn {

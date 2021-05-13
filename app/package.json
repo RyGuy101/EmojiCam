@@ -71,6 +71,7 @@
     "eslint-plugin-react": "^7.23.1",
     "eslint-plugin-react-hooks": "^4.2.0",
     "grapheme-splitter": "^1.0.4",
+    "handtrackjs": "^0.1.5",
     "immer": "^9.0.1",
     "install": "^0.13.0",
     "npm": "^7.11.2",
