@@ -50,18 +50,22 @@ function startVideo(callback: any) {
 }
 
 function runDetection() {
-  model.detect(video).then((predictions: any) => {
-    // console.log("Predictions: ", predictions);
-    detectionCallback(predictions);
-    const showPredictions = [];
-    for (const prediction of predictions) {
-      if (prediction.label === "open" || prediction.label === "closed") {
-        showPredictions.push(prediction);
+  if (model) {
+    model.detect(video).then((predictions: any) => {
+      // console.log("Predictions: ", predictions);
+      detectionCallback(predictions);
+      const showPredictions = [];
+      for (const prediction of predictions) {
+        if (prediction.label === "open" || prediction.label === "closed") {
+          showPredictions.push(prediction);
+        }
       }
-    }
-    model.renderPredictions(showPredictions, canvas, context, video);
+      model.renderPredictions(showPredictions, canvas, context, video);
+      requestAnimationFrame(runDetection);
+    });
+  } else {
     requestAnimationFrame(runDetection);
-  });
+  }
 }
 
 const mapStateToProps = (state: AppState) => {
